@@ -66,7 +66,17 @@ class ResearchManager:
                 input,
                 run_config=self.run_config,
             )
-            return str(result.final_output)
+            # Extract only the text content to avoid mock object serialization issues
+            final_output = result.final_output
+            if hasattr(final_output, 'text'):
+                return str(final_output.text)
+            elif hasattr(final_output, 'content'):
+                return str(final_output.content)
+            else:
+                # Force string conversion and ensure it's a plain string
+                text_output = str(final_output)
+                # Return a new string to ensure no mock objects are attached
+                return f"{text_output}"
         except Exception:
             return None
 
