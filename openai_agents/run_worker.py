@@ -32,10 +32,6 @@ async def main():
             data_converter=pydantic_data_converter,
         )
 
-        # Create single SerializableModelActivity instance per worker process to avoid
-        # serialization conflicts between multiple workers
-        model_activity = SerializableModelActivity()
-
         worker = Worker(
             client,
             task_queue="openai-agents-task-queue",
@@ -47,7 +43,7 @@ async def main():
                 AgentsAsToolsWorkflow,
             ],
             activities=[
-                model_activity.invoke_model_activity,
+                SerializableModelActivity().invoke_model_activity,
                 get_weather,
             ],
         )
