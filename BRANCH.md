@@ -4,7 +4,7 @@ The main differences between the `openai-agents` branch and `main` are:
 
 ## Configuration Changes
 - Added `.python-version` file specifying Python 3.10.16
-- Updated `pyproject.toml` to require Python ~3.10.16 (was ~3.9)
+- Updated `pyproject.toml` to require Python ~3.10.16 (was ~3.9) - Required due to Python 3.10+ union type syntax (`str | None`) in `customer_service_workflow.py` causing `TypeError: unsupported operand type(s) for |` on Python 3.9
 - Updated `uv.lock` file with Python 3.10.16 dependencies
 
 ## Documentation Added
