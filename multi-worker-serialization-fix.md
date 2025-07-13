@@ -16,7 +16,7 @@ The error occurs during **activity result serialization**, not input serializati
 
 ### 1. Module-Level Patching Infrastructure
 
-**Location**: `temporal-sdk-python/temporalio/contrib/openai_agents/temporal_openai_agents.py:32-84`
+**Location**: `temporalio/contrib/openai_agents/temporal_openai_agents.py:32-84` (Temporal Python SDK)
 
 The `set_open_ai_agent_temporal_overrides()` context manager establishes the patching infrastructure:
 
@@ -39,10 +39,10 @@ This function applies **two critical module-level patches**:
 OpenAI Agent → TemporalOpenAIRunner → _TemporalModelStub → ModelActivity.invoke_model_activity
 ```
 
-**Key Files**:
-- `_openai_runner.py:64-68` - Replaces `run_config.model` with `_TemporalModelStub`
-- `_temporal_model_stub.py:154-167` - Converts model calls to `workflow.execute_activity_method()`
-- `_invoke_model_activity.py:128-184` - The actual activity implementation
+**Key Files** (Temporal Python SDK):
+- `temporalio/contrib/openai_agents/_openai_runner.py:64-68` - Replaces `run_config.model` with `_TemporalModelStub`
+- `temporalio/contrib/openai_agents/_temporal_model_stub.py:154-167` - Converts model calls to `workflow.execute_activity_method()`
+- `temporalio/contrib/openai_agents/_invoke_model_activity.py:128-184` - The actual activity implementation
 
 ### 3. MockValSer Object Injection
 
@@ -55,7 +55,7 @@ These objects are **Pydantic validator artifacts** that are not JSON serializabl
 
 ### 4. Serialization Failure Point
 
-**CONFIRMED** - **Exact Location**: `temporal-sdk-python/temporalio/worker/_activity.py:460`
+**CONFIRMED** - **Exact Location**: `temporalio/worker/_activity.py:460` (Temporal Python SDK)
 
 ```python
 result = await self._execute_activity(start, running_activity, task_token)
@@ -113,7 +113,7 @@ SerializableModelActivity().invoke_model_activity
 
 #### Implementation Highlights
 
-**Location**: `openai_agents/serializable_model_activity.py:94-104`
+**Location**: `openai_agents/serializable_model_activity.py:94-104` (samples repo)
 
 ```python
 class SerializableModelActivity(BaseModelActivity):
@@ -128,14 +128,14 @@ class SerializableModelActivity(BaseModelActivity):
         return SerializableModelResponse.from_model_response(response)
 ```
 
-**Key Serialization Strategy** (`serializable_model_activity.py:66`):
+**Key Serialization Strategy** (`openai_agents/serializable_model_activity.py:66`, samples repo):
 
 ```python
 # Use mode='json' to avoid MockValSer issues
 output_dicts.append(item.model_dump(mode='json', exclude_unset=True))
 ```
 
-**Safe Fallback for MockValSer Objects** (`serializable_model_activity.py:73-78`):
+**Safe Fallback for MockValSer Objects** (`openai_agents/serializable_model_activity.py:73-78`, samples repo):
 
 ```python
 # Safe fallback for serialization failures
@@ -146,12 +146,12 @@ except Exception as e:
     })
 ```
 
-**Usage Conversion** (`serializable_model_activity.py:18-47`):
+**Usage Conversion** (`openai_agents/serializable_model_activity.py:18-47`, samples repo):
 The `SerializableUsage.from_usage()` method safely extracts data from potentially contaminated usage objects using multiple fallback strategies for `input_tokens_details` and `output_tokens_details`.
 
 ### Code Changes
 
-The core integration in `openai_agents/run_worker.py` only involves a small substitution, but it depends on a new module for the serialization fix logic:
+The core integration in `openai_agents/run_worker.py` (samples repo) only involves a small substitution, but it depends on a new module for the serialization fix logic:
 
 ```diff
 - from temporalio.contrib.openai_agents import (
@@ -172,13 +172,13 @@ The core integration in `openai_agents/run_worker.py` only involves a small subs
          ],
 ```
 
-**New file**: `openai_agents/serializable_model_activity.py` – Adds a dedicated 100+ line wrapper to handle proper serialization of nested response data. While the change in the main worker file is minimal, this new module contains the real fix logic and must be maintained alongside the SDK.
+**New file**: `openai_agents/serializable_model_activity.py` (samples repo) – Adds a dedicated 100+ line wrapper to handle proper serialization of nested response data. While the change in the main worker file is minimal, this new module contains the real fix logic and must be maintained alongside the SDK.
 
 ## Testing & Validation
 
 ### Dual Worker Test
 
-**Location**: `test_dual_workers.py`
+**Location**: `test_dual_workers.py` (samples repo)
 
 Created comprehensive test that:
 
