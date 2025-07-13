@@ -5,10 +5,10 @@ from datetime import timedelta
 
 from temporalio.client import Client
 from temporalio.contrib.openai_agents import (
-    ModelActivity,
     ModelActivityParameters,
     set_open_ai_agent_temporal_overrides,
 )
+from openai_agents.serializable_model_activity import SerializableModelActivity
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 
@@ -32,6 +32,10 @@ async def main():
             data_converter=pydantic_data_converter,
         )
 
+        # Create single SerializableModelActivity instance per worker process to avoid
+        # serialization conflicts between multiple workers
+        model_activity = SerializableModelActivity()
+
         worker = Worker(
             client,
             task_queue="openai-agents-task-queue",
@@ -43,7 +47,7 @@ async def main():
                 AgentsAsToolsWorkflow,
             ],
             activities=[
-                ModelActivity().invoke_model_activity,
+                model_activity.invoke_model_activity,
                 get_weather,
             ],
         )
