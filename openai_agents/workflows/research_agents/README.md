@@ -76,6 +76,13 @@ python openai_agents/run_research_workflow.py "Caribbean vacation spots in April
 python openai_agents/run_research_workflow.py "Inner-north Melbourne food and drink spots" --interactive
 ```
 
+**New Interactive Experience:**
+- Session stays open throughout the research process
+- Questions are presented one at a time for natural conversation
+- Type answers and press Enter to continue
+- Type "exit", "quit", "end", or "done" to terminate early
+- Workflow continues running until research is complete
+
 ### Check Workflow Status
 ```bash
 python openai_agents/run_research_workflow.py --status --workflow-id research-workflow

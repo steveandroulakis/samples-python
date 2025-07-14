@@ -70,9 +70,11 @@ class ResearchManager:
         trace_id = gen_trace_id()
         with trace("Clarification check", trace_id=trace_id):
             # Start with triage agent to determine if clarifications are needed
+            from agents import TResponseInputItem
+            input_items: list[TResponseInputItem] = [{"content": query, "role": "user"}]
             result = await Runner.run(
                 self.triage_agent,
-                query,
+                input_items,
                 run_config=self.run_config,
             )
             
@@ -111,9 +113,11 @@ class ResearchManager:
             
             # Run the instruction agent to create optimal research prompt
             instruction_agent = new_instruction_agent()
+            from agents import TResponseInputItem
+            input_items: list[TResponseInputItem] = [{"content": enriched_query, "role": "user"}]
             result = await Runner.run(
                 instruction_agent,
-                enriched_query,
+                input_items,
                 run_config=self.run_config,
             )
             
@@ -127,14 +131,31 @@ class ResearchManager:
     def _extract_clarifications(self, result) -> Optional[Clarifications]:
         """Extract clarifications from agent result if present"""
         try:
+            # Check if the final output is Clarifications
+            if hasattr(result, 'final_output') and isinstance(result.final_output, Clarifications):
+                return result.final_output
+            
             # Look through result items for clarifications
             for item in result.new_items:
                 if hasattr(item, 'raw_item') and hasattr(item.raw_item, 'content'):
                     content = item.raw_item.content
                     if isinstance(content, Clarifications):
                         return content
+                # Also check if the item itself has output_type content
+                if hasattr(item, 'output') and isinstance(item.output, Clarifications):
+                    return item.output
+            
+            # Try result.final_output_as() method if available
+            try:
+                clarifications = result.final_output_as(Clarifications)
+                if clarifications:
+                    return clarifications
+            except Exception:
+                pass
+                
             return None
-        except Exception:
+        except Exception as e:
+            workflow.logger.info(f"Error extracting clarifications: {e}")
             return None
 
     def _enrich_query(self, original_query: str, questions: List[str], responses: Dict[str, str]) -> str:

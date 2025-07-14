@@ -21,6 +21,8 @@ try:
     )
     from openai_agents.workflows.research_agents.research_models import (
         ClarificationInput,
+        SingleClarificationInput,
+        UserQueryInput,
         ResearchInteraction,
     )
     from openai_agents.workflows.research_bot_workflow import ResearchWorkflow
@@ -89,13 +91,41 @@ def test_models():
         assert len(clarif_input.responses) == 2
         print("  ✅ ClarificationInput model works")
         
-        # Test ResearchInteraction model
+        # Test new SingleClarificationInput model
+        single_clarif = SingleClarificationInput(question_index=0, answer="Asian cuisine")
+        assert single_clarif.question_index == 0
+        assert single_clarif.answer == "Asian cuisine"
+        print("  ✅ SingleClarificationInput model works")
+        
+        # Test new UserQueryInput model
+        user_query = UserQueryInput(query="Best restaurants in Melbourne")
+        assert user_query.query == "Best restaurants in Melbourne"
+        print("  ✅ UserQueryInput model works")
+        
+        # Test ResearchInteraction model with new functionality
         interaction = ResearchInteraction(
             original_query="Best vacation spots",
-            status="pending"
+            status="pending",
+            clarification_questions=["What's your budget?", "When do you want to travel?"]
         )
         assert interaction.original_query == "Best vacation spots"
         assert interaction.status == "pending"
+        
+        # Test new question handling methods
+        assert interaction.get_current_question() == "What's your budget?"
+        assert interaction.has_more_questions() == True
+        
+        # Answer first question
+        has_more = interaction.answer_current_question("Under $1000")
+        assert has_more == True
+        assert interaction.current_question_index == 1
+        assert interaction.get_current_question() == "When do you want to travel?"
+        
+        # Answer second question
+        has_more = interaction.answer_current_question("March")
+        assert has_more == False
+        assert interaction.current_question_index == 2
+        
         print("  ✅ ResearchInteraction model works")
         
         # Test ClarificationResult model
@@ -210,13 +240,16 @@ def print_usage():
     print("2. Interactive Research (with clarifying questions):")
     print("   python openai_agents/run_research_workflow.py 'Your research query' --interactive")
     print()
-    print("3. Check workflow status:")
+    print("3. Force new session (if previous workflow completed):")
+    print("   python openai_agents/run_research_workflow.py 'Your research query' --interactive --new-session")
+    print()
+    print("4. Check workflow status:")
     print("   python openai_agents/run_research_workflow.py --status")
     print()
-    print("4. Send clarifications to running workflow:")
+    print("5. Send clarifications to running workflow:")
     print("   python openai_agents/run_research_workflow.py --clarify question_0='answer1' question_1='answer2'")
     print()
-    print("5. Interactive mode (prompts for input):")
+    print("6. Interactive mode (prompts for input):")
     print("   python openai_agents/run_research_workflow.py")
     print()
     print("📝 Note: Make sure Temporal server is running on localhost:7233")
