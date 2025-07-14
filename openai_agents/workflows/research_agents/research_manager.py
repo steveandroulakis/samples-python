@@ -8,7 +8,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     # TODO: Restore progress updates
-    from agents import RunConfig, Runner, custom_span, gen_trace_id, trace
+    from agents import RunConfig, Runner, custom_span, gen_trace_id, trace, TResponseInputItem
 
     from openai_agents.workflows.research_agents.planner_agent import (
         WebSearchItem,
@@ -70,7 +70,6 @@ class ResearchManager:
         trace_id = gen_trace_id()
         with trace("Clarification check", trace_id=trace_id):
             # Start with triage agent to determine if clarifications are needed
-            from agents import TResponseInputItem
             input_items: list[TResponseInputItem] = [{"content": query, "role": "user"}]
             result = await Runner.run(
                 self.triage_agent,
@@ -111,22 +110,13 @@ class ResearchManager:
             # Enrich the query with clarification responses
             enriched_query = self._enrich_query(original_query, questions, responses)
             
-            # Run the instruction agent to create optimal research prompt
-            instruction_agent = new_instruction_agent()
-            from agents import TResponseInputItem
-            input_items: list[TResponseInputItem] = [{"content": enriched_query, "role": "user"}]
-            result = await Runner.run(
-                instruction_agent,
-                input_items,
-                run_config=self.run_config,
-            )
+            # Now run the full research pipeline with the enriched query
+            # This should go through planner → search → writer
+            search_plan = await self._plan_searches(enriched_query)
+            search_results = await self._perform_searches(search_plan)
+            report = await self._write_report(enriched_query, search_results)
             
-            # The instruction agent hands off to planner, which starts the research pipeline
-            final_output = result.final_output
-            if hasattr(final_output, 'markdown_report'):
-                return final_output.markdown_report
-            else:
-                return str(final_output)
+            return report.markdown_report
 
     def _extract_clarifications(self, result) -> Optional[Clarifications]:
         """Extract clarifications from agent result if present"""
@@ -167,9 +157,10 @@ class ResearchManager:
         return enriched
 
     async def _plan_searches(self, query: str) -> WebSearchPlan:
+        input_str: str = f"Query: {query}"
         result = await Runner.run(
             self.planner_agent,
-            f"Query: {query}",
+            input_str,
             run_config=self.run_config,
         )
         return result.final_output_as(WebSearchPlan)
@@ -189,11 +180,11 @@ class ResearchManager:
             return results
 
     async def _search(self, item: WebSearchItem) -> str | None:
-        input = f"Search term: {item.query}\nReason for searching: {item.reason}"
+        input_str: str = f"Search term: {item.query}\nReason for searching: {item.reason}"
         try:
             result = await Runner.run(
                 self.search_agent,
-                input,
+                input_str,
                 run_config=self.run_config,
             )
             return str(result.final_output)
@@ -201,10 +192,10 @@ class ResearchManager:
             return None
 
     async def _write_report(self, query: str, search_results: list[str]) -> ReportData:
-        input = f"Original query: {query}\nSummarized search results: {search_results}"
+        input_str: str = f"Original query: {query}\nSummarized search results: {search_results}"
         result = await Runner.run(
             self.writer_agent,
-            input,
+            input_str,
             run_config=self.run_config,
         )
 
