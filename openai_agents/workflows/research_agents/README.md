@@ -1,6 +1,6 @@
 # Enhanced Research Workflow with Clarifying Questions
 
-This enhanced research workflow implements a multi-agent system that can ask clarifying questions before conducting deep research, based on the patterns from the OpenAI Deep Research API cookbook.
+This enhanced research workflow implements a multi-agent system that can ask clarifying questions before conducting deep research, based on the patterns from the [OpenAI Deep Research API cookbook](https://cookbook.openai.com/examples/deep_research_api/introduction_to_deep_research_api_agents).
 
 ## Architecture
 
