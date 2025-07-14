@@ -75,7 +75,7 @@ async def run_interactive_research_wealth_pattern(client: Client, query: str, wo
             )
         except Exception as start_error:
             print(f"❌ Failed to start workflow: {start_error}")
-            print("💡 Try using --new-session flag to force a new session")
+            print("💡 Try using the --new-session flag to force a new session")
             raise
     
     if not handle:
